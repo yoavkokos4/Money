@@ -841,14 +841,20 @@ function normalize(d){
 }
 $("#copyCode").onclick=async function(){
   const code=await encodeState();
+  // always show it, so the button can never look dead
+  $("#pasteBox").style.display="block";
+  const ta=$("#codeIn"); ta.value=code; ta.focus();
+  try{ ta.setSelectionRange(0,code.length); }catch(e){}
+  let ok=false;
   try{
-    await navigator.clipboard.writeText(code);
-    toast("הקוד הועתק — הדביקו אותו במחשב");
-  }catch(e){
-    $("#pasteBox").style.display="block";
-    const ta=$("#codeIn"); ta.value=code; ta.focus(); ta.select();
-    toast("סמנו והעתיקו ידנית");
-  }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await Promise.race([ navigator.clipboard.writeText(code),
+        new Promise((_,rej)=>setTimeout(rej,1200)) ]);
+      ok=true;
+    }
+  }catch(e){}
+  if(!ok){ try{ ok=document.execCommand("copy"); }catch(e){} }
+  toast(ok?"הקוד הועתק ✓":"סמנו והעתיקו את הקוד");
 };
 $("#showPaste").onclick=()=>{ const b=$("#pasteBox"); b.style.display = b.style.display==="none"?"block":"none"; };
 async function loadCode(asView){
