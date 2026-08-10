@@ -133,6 +133,12 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
 .toast.on{opacity:1}
 .install{background:linear-gradient(135deg,#eef0ff,#f6f0ff);border:1px solid #dfe1fb}
 
+/* view mode bar */
+.viewbar{display:none;align-items:center;justify-content:space-between;gap:10px;background:#fff6e0;border:1px solid #f2e0b0;color:#8a6410;
+  border-radius:13px;padding:9px 13px;margin-bottom:12px;font-size:13px}
+.viewbar.on{display:flex}
+.viewbar button{background:#8a6410;color:#fff;border-radius:8px;padding:5px 11px;font-size:12.5px;font-weight:600;flex:none}
+
 /* onboarding */
 .onb{position:fixed;inset:0;background:var(--bg);z-index:90;display:none;overflow-y:auto}
 .onb.on{display:block}
@@ -153,6 +159,11 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
 </head>
 <body>
 <div class="wrap">
+
+  <div class="viewbar" id="viewBar">
+    <span>מצב צפייה — נתונים ממכשיר אחר. שינויים כאן לא נשמרים.</span>
+    <button id="exitView">יציאה</button>
+  </div>
 
   <div class="top">
     <div class="brand">
@@ -248,7 +259,24 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
         <button class="btn line sm" id="expCsv" style="flex:1">ייצוא CSV</button>
       </div>
       <input type="file" id="fileIn" accept="application/json" style="display:none">
-      <div class="tiny muted" style="margin:10px 0">הנתונים נשמרים על המכשיר הזה בלבד. כל מכשיר מחזיק עותק נפרד — לכן כדאי לייצא גיבוי מדי פעם.</div>
+
+      <div class="grouplab">העברה בין מכשירים</div>
+      <div class="tiny muted" style="margin-bottom:8px">בטלפון: «העתקת קוד». שולחים אותו לעצמכם (וואטסאפ, פתקים, מייל) ובמחשב מדביקים אותו כאן.</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn line sm" id="copyCode" style="flex:1">העתקת קוד</button>
+        <button class="btn line sm" id="showPaste" style="flex:1">הדבקת קוד</button>
+      </div>
+      <div id="pasteBox" style="display:none;margin-top:8px">
+        <textarea class="in" id="codeIn" rows="3" placeholder="הדביקו כאן את הקוד" style="resize:vertical"></textarea>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button class="btn ghost sm" id="loadView" style="flex:1">צפייה בלבד</button>
+          <button class="btn sm" id="loadReplace" style="flex:1">החלפת הנתונים כאן</button>
+        </div>
+        <div class="tiny muted" style="margin-top:6px">«צפייה בלבד» לא נוגעת בנתונים ששמורים במכשיר הזה.</div>
+      </div>
+
+      <div class="grouplab">שונות</div>
+      <div class="tiny muted" style="margin:0 0 10px">הנתונים נשמרים על המכשיר הזה בלבד. כל מכשיר מחזיק עותק נפרד — לכן כדאי לייצא גיבוי מדי פעם.</div>
       <button class="btn line sm" id="resetAll" style="width:100%">התחלה מחדש (מחיקת כל הנתונים)</button>
     </div>
   </section>
@@ -336,6 +364,11 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
         <button class="btn" id="obStart">בוא נגדיר את התקציב שלי</button>
         <button class="btn ghost" id="obDemo">להתחיל עם תוכנית לדוגמה</button>
         <button class="btn line" id="obRestore">שחזור מקובץ גיבוי</button>
+        <button class="btn line" id="obCodeBtn">יש לי קוד ממכשיר אחר</button>
+      </div>
+      <div id="obCodeBox" style="display:none;margin-top:10px">
+        <textarea class="in" id="obCodeIn" rows="3" placeholder="הדביקו כאן את הקוד" style="resize:vertical"></textarea>
+        <button class="btn sm" id="obCodeLoad" style="width:100%;margin-top:6px">טעינה</button>
       </div>
       <div class="tiny muted" style="margin-top:18px">אם אתם מתכוונים להוסיף את האפליקציה למסך הבית — כדאי לעשות את זה קודם, ורק אז להזין נתונים. iOS שומר את הנתונים בנפרד לספארי ולאפליקציה שבמסך הבית.</div>
     </div>
@@ -406,7 +439,8 @@ if(!S || typeof S!=="object"){ S=blank(); firstRun=true; }
 if(!S.settings) S.settings={startDay:1};
 if(!S.ui) S.ui={};
 ["income","bills","budgets","goals","tx"].forEach(k=>{ if(!Array.isArray(S[k])) S[k]=[]; });
-const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){ toast("לא הצלחתי לשמור"); } };
+let viewMode=false;
+const save=()=>{ if(viewMode) return; try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){ toast("לא הצלחתי לשמור"); } };
 
 /* ---------- period ---------- */
 let offset=0;
@@ -776,6 +810,64 @@ $("#fileIn").onchange=e=>{
   r.readAsText(f); e.target.value="";
 };
 
+/* ---------- device transfer code ---------- */
+const b64enc=bin=>{let s="";for(let i=0;i<bin.length;i++)s+=String.fromCharCode(bin[i]);return btoa(s);};
+const b64dec=str=>{const bin=atob(str);const a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return a;};
+async function encodeState(){
+  const json=JSON.stringify(S);
+  try{
+    if(typeof CompressionStream==="undefined") throw 0;
+    const buf=await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer();
+    return "FZ1:"+b64enc(new Uint8Array(buf));
+  }catch(e){
+    return "FJ1:"+btoa(String.fromCharCode(...new TextEncoder().encode(json)));
+  }
+}
+async function decodeState(code){
+  code=(code||"").trim().replace(/\s+/g,"");
+  if(code.startsWith("FZ1:")){
+    const txt=await new Response(new Blob([b64dec(code.slice(4))]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+    return JSON.parse(txt);
+  }
+  if(code.startsWith("FJ1:")) return JSON.parse(new TextDecoder().decode(b64dec(code.slice(4))));
+  return JSON.parse(code.trim());  // raw JSON from a backup file also works
+}
+function validState(d){ return d && typeof d==="object" && Array.isArray(d.tx) && Array.isArray(d.bills); }
+function normalize(d){
+  if(!d.settings) d.settings={startDay:1};
+  if(!d.ui) d.ui={};
+  ["income","bills","budgets","goals","tx"].forEach(k=>{ if(!Array.isArray(d[k])) d[k]=[]; });
+  return d;
+}
+$("#copyCode").onclick=async function(){
+  const code=await encodeState();
+  try{
+    await navigator.clipboard.writeText(code);
+    toast("הקוד הועתק — הדביקו אותו במחשב");
+  }catch(e){
+    $("#pasteBox").style.display="block";
+    const ta=$("#codeIn"); ta.value=code; ta.focus(); ta.select();
+    toast("סמנו והעתיקו ידנית");
+  }
+};
+$("#showPaste").onclick=()=>{ const b=$("#pasteBox"); b.style.display = b.style.display==="none"?"block":"none"; };
+async function loadCode(asView){
+  let d;
+  try{ d=await decodeState($("#codeIn").value); }catch(e){ toast("הקוד לא תקין"); return; }
+  if(!validState(d)){ toast("הקוד לא תקין"); return; }
+  normalize(d);
+  if(asView){
+    viewMode=true; S=d; $("#viewBar").classList.add("on"); $("#fab").style.display="none";
+    render(); window.scrollTo({top:0}); toast("מצב צפייה");
+  } else {
+    viewMode=false; S=d; save(); render(); toast("הנתונים הוחלפו ✓");
+  }
+  $("#pasteBox").style.display="none"; $("#codeIn").value="";
+}
+$("#loadView").onclick=()=>loadCode(true);
+$("#loadReplace").onclick=()=>loadCode(false);
+$("#exitView").onclick=()=>location.reload();
+
 /* ---------- onboarding ---------- */
 const OB_BILLS=[["שכר דירה","🏠",1],["ארנונה","🏛️",0],["חשמל","💡",1],["מים","💧",0],["אינטרנט וסלולר","📱",1],
   ["ועד בית","🏢",0],["ביטוחים","🛡️",0],["ביטוח לאומי","🏦",0],["חדר כושר","🏋️",0],["חיסכון והשקעה","📈",1]];
@@ -795,6 +887,12 @@ if(firstRun){
   $("#obStart").onclick=()=>obStep(2);
   $("#obDemo").onclick=()=>{ S=seed(); finishOnb(); toast("אפשר לשנות הכל בלשונית «תוכנית»"); };
   $("#obRestore").onclick=()=>$("#fileIn").click();
+  $("#obCodeBtn").onclick=()=>{ const b=$("#obCodeBox"); b.style.display = b.style.display==="none"?"block":"none"; };
+  $("#obCodeLoad").onclick=async()=>{
+    let d; try{ d=await decodeState($("#obCodeIn").value); }catch(e){ toast("הקוד לא תקין"); return; }
+    if(!validState(d)){ toast("הקוד לא תקין"); return; }
+    S=normalize(d); finishOnb(); toast("נטען ✓");
+  };
   $("#onb").addEventListener("click",e=>{
     const nav=e.target.closest("[data-ob]"); if(nav){ obStep(+nav.dataset.ob); return; }
     const p=e.target.closest(".pick"); if(p){ p.classList.toggle("on"); return; }
