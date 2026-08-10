@@ -819,34 +819,52 @@ $("#fileIn").onchange=e=>{
 /* ---------- device transfer code ---------- */
 const b64enc=bin=>{let s="";for(let i=0;i<bin.length;i++)s+=String.fromCharCode(bin[i]);return btoa(s);};
 const b64dec=str=>{const bin=atob(str);const a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return a;};
+/* base64url: only A-Z a-z 0-9 - _  — nothing any messaging app will rewrite.
+   Plain base64 was the bug: some channels turn "+" into a space. */
+const B64U={
+  enc(bytes){ return b64enc(bytes).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); },
+  dec(str){ str=str.replace(/-/g,"+").replace(/_/g,"/"); while(str.length%4) str+="="; return b64dec(str); }
+};
 const PLAIN_LIMIT=40000; // below this, send uncompressed so ANY device can read it
 async function encodeState(){
   const json=JSON.stringify(S);
-  const plain=()=>"FJ1:"+b64enc(new TextEncoder().encode(json));
+  const wrap=(tag,data)=>`${tag}.${data.length}.${data}`;
+  const plain=()=>wrap("FJ2",B64U.enc(new TextEncoder().encode(json)));
   if(json.length<PLAIN_LIMIT || $("#noZip").checked) return plain();
   try{
     if(typeof CompressionStream==="undefined") throw 0;
     const buf=await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer();
-    return "FZ1:"+b64enc(new Uint8Array(buf));
+    return wrap("FZ2",B64U.enc(new Uint8Array(buf)));
   }catch(e){ return plain(); }
 }
-function err(kind){ const e=new Error(kind); e.kind=kind; return e; }
+function err(kind,info){ const e=new Error(kind); e.kind=kind; e.info=info; return e; }
+async function ungzip(bytes){
+  if(typeof DecompressionStream==="undefined") throw err("nozip");
+  return await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+}
 async function decodeState(code){
   code=(code||"").trim().replace(/\s+/g,"");
   try{
-    if(code.startsWith("FZ1:")){
-      if(typeof DecompressionStream==="undefined") throw err("nozip");
-      const txt=await new Response(new Blob([b64dec(code.slice(4))]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
-      return JSON.parse(txt);
+    const m=/^(FJ2|FZ2)\.(\d+)\.(.*)$/.exec(code);
+    if(m){
+      const [,tag,lenStr,data]=m, want=+lenStr;
+      if(data.length!==want) throw err("cut",{got:data.length,want});
+      const bytes=B64U.dec(data);
+      return JSON.parse(tag==="FZ2" ? await ungzip(bytes) : new TextDecoder().decode(bytes));
     }
+    if(code.startsWith("FZ1:")) return JSON.parse(await ungzip(b64dec(code.slice(4))));       // legacy
     if(code.startsWith("FJ1:")) return JSON.parse(new TextDecoder().decode(b64dec(code.slice(4))));
     if(code.startsWith("{")) return JSON.parse(code);  // raw JSON from a backup file
-    throw err("broken");
+    throw err("shape");
   }catch(e){ throw (e.kind ? e : err("broken")); }
 }
-const errMsg=e=> e && e.kind==="nozip"
-  ? "המכשיר הזה לא מפענח קוד דחוס — סמנו «בלי דחיסה» במכשיר השני"
-  : "הקוד לא שלם — כנראה לא הועתק במלואו";
+function errMsg(e){
+  if(!e) return "הקוד לא תקין";
+  if(e.kind==="nozip") return "המכשיר הזה לא מפענח קוד דחוס — סמנו «בלי דחיסה» במכשיר השני";
+  if(e.kind==="cut")   return `הקוד נחתך: הגיעו ${e.info.got} תווים מתוך ${e.info.want}`;
+  if(e.kind==="shape") return "זה לא נראה כמו קוד — העתיקו שוב מההתחלה";
+  return "הקוד הגיע פגום — נסו להעביר אותו בערוץ אחר";
+}
 function validState(d){ return d && typeof d==="object" && Array.isArray(d.tx) && Array.isArray(d.bills); }
 function normalize(d){
   if(!d.settings) d.settings={startDay:1};
@@ -874,7 +892,16 @@ $("#copyCode").onclick=async function(){
   if(!ok){ try{ ok=document.execCommand("copy"); }catch(e){} }
   toast(ok?"הקוד הועתק ✓":"סמנו והעתיקו את הקוד");
 };
-$("#showPaste").onclick=()=>{ const b=$("#pasteBox"); b.style.display = b.style.display==="none"?"block":"none"; };
+$("#showPaste").onclick=()=>{ const b=$("#pasteBox"); b.style.display = b.style.display==="none"?"block":"none";
+  if(b.style.display==="block"){ $("#codeIn").value=""; $("#codeLen").textContent=""; $("#codeIn").focus(); } };
+$("#codeIn").addEventListener("input",function(){
+  const v=this.value.trim().replace(/\s+/g,"");
+  const m=/^(FJ2|FZ2)\.(\d+)\./.exec(v);
+  if(!v){ $("#codeLen").textContent=""; return; }
+  if(m){ const want=+m[2], got=v.length-m[0].length;
+    $("#codeLen").textContent = got===want ? `הקוד שלם ✓ (${got} תווים)` : `הגיעו ${got} תווים מתוך ${want}`;
+  } else { $("#codeLen").textContent=`${v.length} תווים`; }
+});
 async function loadCode(asView){
   let d;
   try{ d=await decodeState($("#codeIn").value); }catch(e){ toast(errMsg(e)); return; }
