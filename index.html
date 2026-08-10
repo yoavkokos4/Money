@@ -132,6 +132,23 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
 .toast{position:fixed;bottom:calc(100px + env(safe-area-inset-bottom));inset-inline:0;margin:auto;width:max-content;max-width:80%;background:#14161d;color:#fff;padding:10px 16px;border-radius:99px;font-size:13.5px;opacity:0;transition:opacity .25s;z-index:70;pointer-events:none}
 .toast.on{opacity:1}
 .install{background:linear-gradient(135deg,#eef0ff,#f6f0ff);border:1px solid #dfe1fb}
+
+/* onboarding */
+.onb{position:fixed;inset:0;background:var(--bg);z-index:90;display:none;overflow-y:auto}
+.onb.on{display:block}
+.onb .inner{max-width:520px;margin:0 auto;padding:calc(34px + env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom))}
+.onb .biglogo{width:60px;height:60px;border-radius:19px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#fff;font-weight:700;font-size:27px;margin-bottom:18px}
+.onb h2{font-size:24px;letter-spacing:-.02em;margin-bottom:8px}
+.onb p.lead{color:var(--muted);font-size:14.5px;margin:0 0 22px}
+.step{display:none} .step.on{display:block}
+.picks{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 6px}
+.pick{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:9px 13px;font-size:14px;display:flex;align-items:center;gap:7px;transition:all .13s}
+.pick.on{border-color:var(--accent);background:#eef0ff;color:var(--accent);font-weight:600}
+.grouplab{font-size:12.5px;color:var(--muted);margin:16px 0 2px;font-weight:600}
+.onb .navbtns{display:flex;gap:8px;margin-top:26px}
+.dots{display:flex;gap:5px;justify-content:center;margin-top:18px}
+.dots i{width:6px;height:6px;border-radius:99px;background:var(--line)}
+.dots i.on{background:var(--accent);width:16px}
 </style>
 </head>
 <body>
@@ -231,7 +248,8 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
         <button class="btn line sm" id="expCsv" style="flex:1">ייצוא CSV</button>
       </div>
       <input type="file" id="fileIn" accept="application/json" style="display:none">
-      <div class="tiny muted" style="margin-top:10px">הנתונים נשמרים על המכשיר הזה בלבד. כל מכשיר מחזיק עותק נפרד — לכן כדאי לייצא גיבוי מדי פעם.</div>
+      <div class="tiny muted" style="margin:10px 0">הנתונים נשמרים על המכשיר הזה בלבד. כל מכשיר מחזיק עותק נפרד — לכן כדאי לייצא גיבוי מדי פעם.</div>
+      <button class="btn line sm" id="resetAll" style="width:100%">התחלה מחדש (מחיקת כל הנתונים)</button>
     </div>
   </section>
 
@@ -308,6 +326,42 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
   </div>
 </div>
 
+<div class="onb" id="onb">
+  <div class="inner">
+    <div class="step on" id="st1">
+      <div class="biglogo">₪</div>
+      <h2>ברוכים הבאים</h2>
+      <p class="lead">אפליקציה קטנה שעונה על שאלה אחת: כמה נשאר לי להוציא החודש. הנתונים נשמרים על המכשיר הזה בלבד — לא נשלחים לשום מקום ואף אחד אחר לא רואה אותם.</p>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <button class="btn" id="obStart">בוא נגדיר את התקציב שלי</button>
+        <button class="btn ghost" id="obDemo">להתחיל עם תוכנית לדוגמה</button>
+        <button class="btn line" id="obRestore">שחזור מקובץ גיבוי</button>
+      </div>
+      <div class="tiny muted" style="margin-top:18px">אם אתם מתכוונים להוסיף את האפליקציה למסך הבית — כדאי לעשות את זה קודם, ורק אז להזין נתונים. iOS שומר את הנתונים בנפרד לספארי ולאפליקציה שבמסך הבית.</div>
+    </div>
+
+    <div class="step" id="st2">
+      <h2>ההכנסה החודשית</h2>
+      <p class="lead">הסכום שנכנס לחשבון בכל חודש. תמיד אפשר לשנות אחר כך, ולהוסיף עוד מקורות הכנסה.</p>
+      <div class="field"><label>כמה נכנס בחודש (₪)</label><input class="in num" type="number" inputmode="decimal" id="obIncome" placeholder="לדוגמה 8000"></div>
+      <div class="field"><label>באיזה יום בחודש זה נכנס</label><input class="in num" type="number" min="1" max="28" id="obDay" value="1"></div>
+      <div class="navbtns"><button class="btn ghost" data-ob="1" style="flex:1">חזרה</button><button class="btn" data-ob="3" style="flex:2">המשך</button></div>
+      <div class="dots"><i></i><i class="on"></i><i></i></div>
+    </div>
+
+    <div class="step" id="st3">
+      <h2>מה יש לכם בחודש</h2>
+      <p class="lead">בחרו מה רלוונטי. את הסכומים נמלא מיד אחרי זה — עכשיו רק בוחרים שמות.</p>
+      <div class="grouplab">הוצאות קבועות — יורדות בערך אותו דבר כל חודש</div>
+      <div class="picks" id="obBills"></div>
+      <div class="grouplab">מעטפות — הוצאות משתנות שרוצים להגביל</div>
+      <div class="picks" id="obBuds"></div>
+      <div class="navbtns"><button class="btn ghost" data-ob="2" style="flex:1">חזרה</button><button class="btn" id="obFinish" style="flex:2">סיום</button></div>
+      <div class="dots"><i></i><i></i><i class="on"></i></div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -342,8 +396,13 @@ function seed(){
     goals:[], tx:[], ui:{}
   };
 }
-let S;
-try{ S=JSON.parse(localStorage.getItem(KEY)) || seed(); }catch(e){ S=seed(); }
+function blank(){ return {v:2,settings:{startDay:1},income:[],bills:[],budgets:[],goals:[],tx:[],ui:{}}; }
+let S, firstRun=false;
+try{
+  const raw=localStorage.getItem(KEY);
+  if(raw){ S=JSON.parse(raw); } else { S=blank(); firstRun=true; }
+}catch(e){ S=blank(); firstRun=true; }
+if(!S || typeof S!=="object"){ S=blank(); firstRun=true; }
 if(!S.settings) S.settings={startDay:1};
 if(!S.ui) S.ui={};
 ["income","bills","budgets","goals","tx"].forEach(k=>{ if(!Array.isArray(S[k])) S[k]=[]; });
@@ -712,9 +771,53 @@ $("#fileIn").onchange=e=>{
       if(!d || typeof d!=="object" || !Array.isArray(d.tx)) throw 0;
       S=d; if(!S.settings)S.settings={startDay:1}; if(!S.ui)S.ui={};
       ["income","bills","budgets","goals","tx"].forEach(k=>{if(!Array.isArray(S[k]))S[k]=[];});
-      save(); render(); toast("שוחזר ✓");
+      S.ui.done=true; save(); $("#onb").classList.remove("on"); render(); toast("שוחזר ✓");
     }catch(err){ toast("הקובץ לא תקין"); } };
   r.readAsText(f); e.target.value="";
+};
+
+/* ---------- onboarding ---------- */
+const OB_BILLS=[["שכר דירה","🏠",1],["ארנונה","🏛️",0],["חשמל","💡",1],["מים","💧",0],["אינטרנט וסלולר","📱",1],
+  ["ועד בית","🏢",0],["ביטוחים","🛡️",0],["ביטוח לאומי","🏦",0],["חדר כושר","🏋️",0],["חיסכון והשקעה","📈",1]];
+const OB_BUDS=[["סופר","🛒",1],["מסעדות","🍽️",1],["בילויים","🎬",1],["תחבורה","🚌",1],["דלק","⛽",0],
+  ["קפה","☕",0],["בגדים","👕",0],["בריאות","💊",0],["מתנות","🎁",0],["אחר","💸",0]];
+function paintPicks(){
+  const mk=(arr,host)=>host.innerHTML=arr.map(([n,e,d],i)=>
+    `<button class="pick${d?' on':''}" data-i="${i}">${e} ${esc(n)}</button>`).join("");
+  mk(OB_BILLS,$("#obBills")); mk(OB_BUDS,$("#obBuds"));
+}
+function obStep(n){ $$(".step").forEach(s=>s.classList.remove("on")); $("#st"+n).classList.add("on");
+  document.getElementById("onb").scrollTop=0; }
+function finishOnb(){ S.ui.done=true; save(); $("#onb").classList.remove("on"); render(); }
+if(firstRun){
+  paintPicks();
+  $("#onb").classList.add("on");
+  $("#obStart").onclick=()=>obStep(2);
+  $("#obDemo").onclick=()=>{ S=seed(); finishOnb(); toast("אפשר לשנות הכל בלשונית «תוכנית»"); };
+  $("#obRestore").onclick=()=>$("#fileIn").click();
+  $("#onb").addEventListener("click",e=>{
+    const nav=e.target.closest("[data-ob]"); if(nav){ obStep(+nav.dataset.ob); return; }
+    const p=e.target.closest(".pick"); if(p){ p.classList.toggle("on"); return; }
+  });
+  $("#obFinish").onclick=()=>{
+    const inc=parseFloat($("#obIncome").value)||0;
+    const day=clamp(parseInt($("#obDay").value)||1,1,28);
+    S.settings.startDay=day;
+    if(inc>0) S.income.push({id:uid(),name:"משכורת",amount:inc,em:"💼"});
+    $$("#obBills .pick.on").forEach(b=>{ const [n,e]=OB_BILLS[+b.dataset.i]; S.bills.push({id:uid(),name:n,amount:0,day:day,em:e}); });
+    $$("#obBuds .pick.on").forEach(b=>{ const [n,e]=OB_BUDS[+b.dataset.i]; S.budgets.push({id:uid(),name:n,amount:0,em:e}); });
+    finishOnb();
+    $$(".tabs button").forEach(x=>x.classList.toggle("on",x.dataset.v==="plan"));
+    $$(".view").forEach(v=>v.classList.toggle("on",v.id==="v-plan"));
+    toast("עכשיו מלאו את הסכומים");
+  };
+}
+
+/* ---------- reset ---------- */
+$("#resetAll").onclick=function(){
+  if(!this.classList.contains("armed")){ this.classList.add("armed"); this.textContent="בטוח? לחיצה נוספת תמחק הכל";
+    setTimeout(()=>{this.classList.remove("armed");this.textContent="התחלה מחדש (מחיקת כל הנתונים)";},3200); return; }
+  localStorage.removeItem(KEY); location.reload();
 };
 
 /* ---------- install hint ---------- */
@@ -723,7 +826,8 @@ const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
 if(isIOS && !standalone && !S.ui.hideInstall) $("#installCard").style.display="";
 $("#dismissInstall").onclick=()=>{ S.ui.hideInstall=true; save(); $("#installCard").style.display="none"; };
 
-save(); render();
+if(!firstRun) save();
+render();
 })();
 </script>
 </body>
