@@ -133,6 +133,24 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
 .toast.on{opacity:1}
 .install{background:linear-gradient(135deg,#eef0ff,#f6f0ff);border:1px solid #dfe1fb}
 
+/* pace line inside the hero */
+.pace{margin-top:11px;padding-top:10px;border-top:1px solid rgba(255,255,255,.22);font-size:12.5px;opacity:.95}
+.pace:empty{display:none}
+
+/* one-tap repeats */
+.chiprow{display:flex;gap:7px;overflow-x:auto;padding:1px 1px 3px;margin-bottom:14px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.chiprow::-webkit-scrollbar{display:none}
+.chiprow:empty{display:none}
+.qchip{flex:none;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:9px 13px;
+  box-shadow:var(--shadow);font-size:13.5px;display:flex;align-items:center;gap:7px;white-space:nowrap;transition:transform .1s}
+.qchip:active{transform:scale(.96);background:var(--soft)}
+.qchip b{font-variant-numeric:tabular-nums;font-weight:650}
+
+/* month close */
+.closecard{background:linear-gradient(135deg,#eafaf1,#f2fbf6);border-color:#cfeadd}
+.closestat{display:flex;justify-content:space-between;padding:6px 0;font-size:13.5px}
+.closestat b{font-variant-numeric:tabular-nums}
+
 /* view mode bar */
 .viewbar{display:none;align-items:center;justify-content:space-between;gap:10px;background:#fff6e0;border:1px solid #f2e0b0;color:#8a6410;
   border-radius:13px;padding:9px 13px;margin-bottom:12px;font-size:13px}
@@ -181,6 +199,11 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
   </div>
 
   <section class="view on" id="v-home">
+    <div class="card closecard" id="closeCard" style="display:none">
+      <h3><span id="closeTitle">—</span><button class="x" id="closeDismiss">×</button></h3>
+      <div id="closeBody"></div>
+    </div>
+
     <div class="card install" id="installCard" style="display:none">
       <h3>הוספה למסך הבית <button class="x" id="dismissInstall">×</button></h3>
       <div class="sm muted">בספארי: כפתור השיתוף <b>􀈂</b> למטה ← «הוספה למסך הבית». האפליקציה תיפתח במסך מלא בלי סרגלי דפדפן.</div>
@@ -192,12 +215,15 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
       <div class="sub" id="heroSub">—</div>
       <div class="bar" id="heroBar"><i style="width:0%"></i></div>
       <div class="legend"><span id="legL">—</span><span id="legR">—</span></div>
+      <div class="pace" id="pace"></div>
       <div class="chips">
         <div class="chip"><b id="cIncome">—</b><span>הכנסות</span></div>
         <div class="chip"><b id="cBills">—</b><span>קבועות</span></div>
         <div class="chip"><b id="cVar">—</b><span>משתנות</span></div>
       </div>
     </div>
+
+    <div class="chiprow" id="quickRow"></div>
 
     <div class="card">
       <h3>מעטפות החודש <span class="tiny muted" id="envSum"></span></h3>
@@ -340,6 +366,14 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
       <div class="field"><label>תאריך</label><input class="in" type="date" id="mDate"></div>
       <div class="field"><label>הערה</label><input class="in" id="mNote" placeholder="אופציונלי"></div>
     </div>
+    <div class="field" id="mSplitWrap">
+      <label>תשלומים</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input class="in num" type="number" min="1" max="36" value="1" id="mSplit" style="width:90px">
+        <span class="tiny muted" id="mSplitHint">תשלום אחד</span>
+      </div>
+    </div>
+    <div class="tiny muted" id="mSeries" style="display:none;margin-bottom:8px"></div>
     <div style="display:flex;gap:8px;margin-top:12px">
       <button class="btn dang" id="mDel" style="display:none">מחיקה</button>
       <button class="btn ghost" id="mCancel" style="flex:1">ביטול</button>
@@ -496,8 +530,14 @@ function compute(off){
 
   const byCat={};
   tx.filter(t=>t.kind==='expense').forEach(t=>{ byCat[t.category]=(byCat[t.category]||0)+(+t.amount||0); });
+
+  // pace: at today's rate of variable spending, where does the period end up?
+  const paceReady = isNow && elapsed>=4 && spentVar>0;
+  const projVar = paceReady ? spentVar/elapsed*total : null;
+  const projEnd = paceReady ? income-committedBills-projVar : null;
+
   return {p,tx,income,plannedIncome,plannedEnv,committedBills,paidByName,spentVar,remaining,
-          total,elapsed,left,isNow,daily,byCat};
+          total,elapsed,left,isNow,daily,byCat,paceReady,projVar,projEnd};
 }
 const emOf=(arr,name,fb)=>{const o=arr.find(x=>x.name===name);return (o&&o.em)||fb;};
 
@@ -522,6 +562,14 @@ function renderHome(c){
   bar.firstElementChild.style.width=pct+"%";
   $("#legL").textContent=`הוצאת ${money(c.spentVar)} מתוך ${money(Math.max(spendable,0))}`;
   $("#legR").textContent= c.isNow ? `יום ${c.elapsed}/${c.total}` : "";
+
+  // pace — one sentence, only once there's enough of the month to extrapolate from
+  $("#pace").textContent = !c.paceReady ? "" :
+    (c.projEnd>=0
+      ? `בקצב הזה תסיים את החודש עם ${money(c.projEnd)} בפלוס`
+      : `בקצב הזה תחרוג ב־${money(-c.projEnd)} עד סוף החודש`);
+
+  renderQuick(c);
   $("#cIncome").textContent=money(c.income);
   $("#cBills").textContent=money(c.committedBills);
   $("#cVar").textContent=money(c.spentVar);
@@ -571,6 +619,28 @@ function renderHome(c){
   $("#recent").innerHTML=rec.length?rec.map(txRow).join(""):'<div class="empty">אין תנועות בתקופה הזו. לחיצה על + מוסיפה אחת.</div>';
 }
 
+/* one-tap repeats: the expenses you actually keep entering, at the amount you keep entering */
+function quickPicks(){
+  const since=new Date(); since.setDate(since.getDate()-90);
+  const sinceS=iso(since), seen={};
+  S.tx.filter(t=>t.kind==="expense" && t.date>=sinceS && !t.grp).forEach(t=>{
+    const amt=Math.round(+t.amount||0); if(!amt) return;
+    const key=t.category+"|"+amt;
+    (seen[key]=seen[key]||{cat:t.category,amount:amt,n:0,last:""}).n++;
+    if(t.date>seen[key].last) seen[key].last=t.date;
+  });
+  return Object.values(seen).filter(x=>x.n>=2)
+    .sort((a,b)=> b.n-a.n || b.last.localeCompare(a.last)).slice(0,5);
+}
+function renderQuick(c){
+  if(viewMode || !c.isNow){ $("#quickRow").innerHTML=""; return; }
+  const picks=quickPicks();
+  $("#quickRow").innerHTML=picks.map((p,i)=>
+    `<button class="qchip" data-quick="${i}">${esc(emOf(S.budgets,p.cat,"💸"))} ${esc(p.cat)} <b>${nf1.format(p.amount)}</b></button>`
+  ).join("");
+  $("#quickRow").__picks=picks;
+}
+
 const KIND={expense:{t:"משתנה",e:"💸"},bill:{t:"קבועה",e:"🧾"},income:{t:"הכנסה",e:"💰"}};
 function txRow(t){
   const k=KIND[t.kind]||KIND.expense, d=parse(t.date);
@@ -578,7 +648,7 @@ function txRow(t){
   return `<div class="row tap" data-tx="${t.id}"><span class="ico">${esc(emOf(src,t.category,k.e))}</span>
     <div class="grow"><div class="nm">${esc(t.category||k.t)}</div>
       <div class="tiny muted">${d.getDate()}/${d.getMonth()+1}${t.note?' · '+esc(t.note):''}</div></div>
-    <span class="pill">${k.t}</span>
+    <span class="pill">${t.of>1 ? `תשלום ${t.seq}/${t.of}` : k.t}</span>
     <span class="amt" style="color:${t.kind==='income'?'var(--green)':'inherit'}">${t.kind==='income'?'+':'−'}${nf1.format(t.amount)}</span></div>`;
 }
 
@@ -677,7 +747,15 @@ function drawCharts(c){
       plugins:{legend:{position:'bottom',labels:{boxWidth:9,font:{size:11},padding:8}}}}});
 }
 
-let tt; function toast(m){const el=$("#toast");el.textContent=m;el.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>el.classList.remove("on"),1900);}
+let tt; function toast(m){const el=$("#toast");el.textContent=m;el.style.pointerEvents="none";el.onclick=null;
+  el.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>el.classList.remove("on"),1900);}
+// a tap that writes something needs a way back that costs one tap too
+function undoable(msg,undo){
+  const el=$("#toast"); el.textContent=msg+" · ביטול";
+  el.style.pointerEvents="auto"; el.classList.add("on");
+  el.onclick=()=>{ undo(); el.classList.remove("on"); el.onclick=null; el.style.pointerEvents="none"; clearTimeout(tt); };
+  clearTimeout(tt); tt=setTimeout(()=>{ el.classList.remove("on"); el.onclick=null; el.style.pointerEvents="none"; },4200);
+}
 
 /* ---------- transaction sheet (add + edit) ---------- */
 let mKind="expense", editId=null;
@@ -692,14 +770,29 @@ function setKind(k){ mKind=k; $$("#mKind button").forEach(x=>x.classList.toggle(
 function openTx(t, preset){
   const c=compute(offset), today=new Date();
   const def=(today>=c.p.start&&today<=c.p.end)?today:c.p.end;
+  $("#mSplit").value=1; splitHint();
   if(t){ editId=t.id; $("#mTitle").textContent="עריכת תנועה"; $("#mDel").style.display="";
-    setKind(t.kind); $("#mAmt").value=t.amount; $("#mDate").value=t.date; $("#mNote").value=t.note||""; fillCats(t.category); }
+    setKind(t.kind); $("#mAmt").value=t.amount; $("#mDate").value=t.date; $("#mNote").value=t.note||""; fillCats(t.category);
+    const series=t.of>1;
+    $("#mSplitWrap").style.display=series?"none":"";
+    $("#mSeries").style.display=series?"":"none";
+    if(series) $("#mSeries").textContent=`תשלום ${t.seq} מתוך ${t.of} · עריכה משנה רק את התשלום הזה, מחיקה מוחקת את כל הסדרה`;
+    $("#mDel").textContent=series?"מחיקת הסדרה":"מחיקה";
+  }
   else { editId=null; $("#mTitle").textContent="תנועה חדשה"; $("#mDel").style.display="none";
+    $("#mSplitWrap").style.display=""; $("#mSeries").style.display="none";
     setKind(preset?preset.kind:"expense"); $("#mAmt").value=preset?preset.amount:""; $("#mDate").value=iso(def);
-    $("#mNote").value=""; fillCats(preset?preset.category:null); }
+    $("#mNote").value=preset&&preset.note?preset.note:""; fillCats(preset?preset.category:null); }
   $("#ov").classList.add("on");
   if(!t && !preset) setTimeout(()=>$("#mAmt").focus(),100);
 }
+function splitHint(){
+  const n=clamp(parseInt($("#mSplit").value)||1,1,36), a=parseFloat($("#mAmt").value)||0;
+  $("#mSplitHint").textContent = n<2 ? "תשלום אחד"
+    : (a>0 ? `${n} תשלומים של ${money(Math.round(a/n))}, חודש אחרי חודש` : `${n} תשלומים, חודש אחרי חודש`);
+}
+$("#mSplit").addEventListener("input",splitHint);
+$("#mAmt").addEventListener("input",splitHint);
 const closeTx=()=>$("#ov").classList.remove("on");
 $("#fab").onclick=()=>openTx(null);
 $("#mCancel").onclick=closeTx;
@@ -708,12 +801,33 @@ $("#mKind").onclick=e=>{const b=e.target.closest("button"); if(!b)return; setKin
 $("#mSave").onclick=()=>{
   const a=parseFloat($("#mAmt").value);
   if(!(a>0)){ toast("צריך סכום גדול מאפס"); return; }
-  const data={date:$("#mDate").value||iso(new Date()),kind:mKind,category:$("#mCat").value||"כללי",amount:a,note:$("#mNote").value.trim()};
+  const date=$("#mDate").value||iso(new Date());
+  const data={date,kind:mKind,category:$("#mCat").value||"כללי",amount:a,note:$("#mNote").value.trim()};
+  const n=editId ? 1 : clamp(parseInt($("#mSplit").value)||1,1,36);
   if(editId){ const t=S.tx.find(x=>x.id===editId); if(t) Object.assign(t,data); toast("עודכן ✓"); }
+  else if(n>1){ S.tx.push(...splitTx(data,n)); toast(`נרשמו ${n} תשלומים ✓`); }
   else { S.tx.push({id:uid(),...data}); toast("נרשם ✓"); }
   save(); closeTx(); render();
 };
-$("#mDel").onclick=()=>{ if(editId){ S.tx=S.tx.filter(t=>t.id!==editId); save(); closeTx(); render(); toast("נמחק"); } };
+// one purchase, N monthly charges — the way a card actually bills it
+function splitTx(data,n){
+  const grp=uid(), base=Math.round(data.amount/n), d0=parse(data.date), out=[];
+  for(let i=0;i<n;i++){
+    const d=new Date(d0.getFullYear(),d0.getMonth()+i,1);
+    const last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+    d.setDate(Math.min(d0.getDate(),last));
+    out.push({id:uid(),...data,date:iso(d),grp,seq:i+1,of:n,
+      amount: i===n-1 ? Math.round((data.amount-base*(n-1))*100)/100 : base});
+  }
+  return out;
+}
+$("#mDel").onclick=()=>{
+  if(!editId) return;
+  const t=S.tx.find(x=>x.id===editId);
+  if(t && t.grp){ const n=S.tx.filter(x=>x.grp===t.grp).length; S.tx=S.tx.filter(x=>x.grp!==t.grp); toast(`${n} תשלומים נמחקו`); }
+  else { S.tx=S.tx.filter(x=>x.id!==editId); toast("נמחק"); }
+  save(); closeTx(); render();
+};
 document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeTx(); $("#ovE").classList.remove("on"); } });
 
 /* ---------- emoji picker ---------- */
@@ -732,6 +846,15 @@ $("#emojiGrid").onclick=e=>{ const b=e.target.closest("[data-em]"); if(!b||!emoj
 /* ---------- delegated clicks ---------- */
 document.addEventListener("click",e=>{
   const t=e.target;
+  const q=t.closest("[data-quick]");
+  if(q){
+    const p=($("#quickRow").__picks||[])[+q.dataset.quick]; if(!p) return;
+    const id=uid();
+    S.tx.push({id,date:iso(new Date()),kind:"expense",category:p.cat,amount:p.amount,note:""});
+    save(); render();
+    undoable(`${p.cat} ${nf1.format(p.amount)} נרשם`, ()=>{ S.tx=S.tx.filter(x=>x.id!==id); save(); render(); });
+    return;
+  }
   const emb=t.closest("[data-emoji]");
   if(emb){ const [col,id]=emb.dataset.emoji.split(":"); openEmoji(col,id); return; }
 
@@ -969,6 +1092,52 @@ $("#resetAll").onclick=function(){
   localStorage.removeItem(KEY); location.reload();
 };
 
+/* ---------- month close ---------- */
+function maybeShowClose(){
+  if(viewMode) return;
+  const key=iso(period(0).start);
+  if(!S.ui.lastSeen){ S.ui.lastSeen=key; save(); return; }   // first run: nothing to close yet
+  if(S.ui.lastSeen===key) return;
+  const prev=compute(-1);
+  if(!prev.tx.length){ S.ui.lastSeen=key; save(); return; }  // an empty month isn't worth a summary
+  const rate=prev.income>0?Math.round(prev.remaining/prev.income*100):0;
+  const rows=[["הכנסות",money(prev.income)],["קבועות",money(prev.committedBills)],
+              ["משתנות",money(prev.spentVar)],[prev.remaining<0?"חריגה":"נשאר",money(Math.abs(prev.remaining))]];
+  $("#closeTitle").textContent=`${pLabel(prev.p)} נסגר`;
+  $("#closeBody").innerHTML=
+    `<div class="sm" style="margin-bottom:8px">${prev.remaining>=0
+        ? `סיימת עם ${money(prev.remaining)} ביד — ${rate}% מההכנסה`
+        : `חרגת ב־${money(-prev.remaining)}`}</div>`
+    + rows.map(([n,v])=>`<div class="closestat"><span class="muted">${n}</span><b>${v}</b></div>`).join("")
+    + (prev.remaining>0 && S.goals.length
+        ? `<div style="display:flex;gap:6px;margin-top:10px">
+             <select class="in" id="closeGoal">${S.goals.map(g=>`<option value="${g.id}">${esc(g.em||"🎯")} ${esc(g.name)}</option>`).join("")}</select>
+             <button class="btn sm" id="closeMove" style="flex:none">להעביר ${money(prev.remaining)}</button>
+           </div>`
+        : (prev.remaining>0 ? `<div class="tiny muted" style="margin-top:10px">אפשר להגדיר יעד חיסכון בלשונית «יעדים» ולהעביר אליו עודפים.</div>` : ""));
+  $("#closeCard").style.display="";
+  const done=()=>{ S.ui.lastSeen=key; save(); $("#closeCard").style.display="none"; };
+  $("#closeDismiss").onclick=done;
+  const mv=$("#closeMove");
+  if(mv) mv.onclick=()=>{
+    const g=S.goals.find(x=>x.id===$("#closeGoal").value);
+    if(g){ g.saved=(+g.saved||0)+prev.remaining; toast(`הועבר ל${g.name} ✓`); }
+    done(); render();
+  };
+}
+
+/* ---------- ?add=120&cat=... — lets an iOS Shortcut open a prefilled entry ---------- */
+function handleUrlIntent(){
+  const q=new URLSearchParams(location.search);
+  if(!q.has("add") && !q.has("new")) return;
+  const amount=parseFloat(q.get("add"));
+  const cat=q.get("cat")||null;
+  history.replaceState(null,"",location.pathname);   // so a refresh doesn't repeat it
+  if(firstRun) return;
+  openTx(null,{kind:"expense",category:cat,amount:isFinite(amount)&&amount>0?amount:"",note:q.get("note")||""});
+  if(!(isFinite(amount)&&amount>0)) setTimeout(()=>$("#mAmt").focus(),120);
+}
+
 /* ---------- install hint ---------- */
 const standalone = window.navigator.standalone===true || matchMedia('(display-mode: standalone)').matches;
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -977,6 +1146,7 @@ $("#dismissInstall").onclick=()=>{ S.ui.hideInstall=true; save(); $("#installCar
 
 if(!firstRun) save();
 render();
+if(!firstRun){ maybeShowClose(); handleUrlIntent(); }
 })();
 </script>
 </body>
