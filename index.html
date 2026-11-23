@@ -47,13 +47,29 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);margin-bottom:14px}
 .card>h3{font-size:14.5px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
 
-.hero{background:linear-gradient(140deg,#5b5bd6 0%,#7c4fe0 55%,#9d5ce0 100%);color:#fff;border:none;border-radius:22px;padding:22px 20px 18px;box-shadow:0 10px 30px rgba(91,91,214,.24);margin-bottom:14px}
+/* the hero carries the verdict in its colour before you read a single digit */
+.hero{background:linear-gradient(140deg,#5b5bd6 0%,#7c4fe0 55%,#9d5ce0 100%);color:#fff;border:none;border-radius:22px;padding:22px 20px 18px;box-shadow:0 10px 30px rgba(91,91,214,.24);margin-bottom:14px;
+  transition:background .7s ease, box-shadow .7s ease}
+.hero.warm{background:linear-gradient(140deg,#c9761f 0%,#d9712c 55%,#e08a3c 100%);box-shadow:0 10px 30px rgba(201,118,31,.26)}
+.hero.hot{background:linear-gradient(140deg,#c04141 0%,#b3364a 55%,#9c2f55 100%);box-shadow:0 10px 30px rgba(192,65,65,.28)}
+.hero{position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(130% 95% at 88% -15%, rgba(255,255,255,.20), transparent 62%)}
+.hero > *{position:relative;z-index:1}
 .hero .lab{font-size:13px;opacity:.85}
 .hero .big{font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1.1;margin:2px 0 4px;font-variant-numeric:tabular-nums}
 .hero .sub{font-size:13px;opacity:.9}
-.bar{height:8px;border-radius:99px;background:rgba(255,255,255,.25);overflow:hidden;margin:16px 0 8px}
-.bar > i{display:block;height:100%;border-radius:99px;background:#fff;transition:width .4s ease}
-.bar.warn > i{background:#ffd27a} .bar.over > i{background:#ff9e93}
+/* the month as a curve: your spending against the line of perfectly even spending */
+.spark{margin:16px 0 8px;height:62px}
+.spark svg{display:block;width:100%;height:62px;overflow:visible}
+.spark .area{fill:rgba(255,255,255,.2)}
+.spark .line{fill:none;stroke:#fff;stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.spark .ideal{fill:none;stroke:rgba(255,255,255,.5);stroke-width:1.4;stroke-dasharray:3 4;vector-effect:non-scaling-stroke}
+.spark .head{fill:#fff}
+.spark .halo{fill:rgba(255,255,255,.3)}
+.spark .draw{stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:draw 1s cubic-bezier(.3,.8,.3,1) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion: reduce){ .spark .draw{animation:none;stroke-dashoffset:0} }
 .hero .legend{display:flex;justify-content:space-between;font-size:12px;opacity:.9;gap:8px}
 .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
 .chip{background:rgba(255,255,255,.16);border-radius:13px;padding:9px 10px}
@@ -74,8 +90,10 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
 .env:last-child{border-bottom:none}
 .env .l1{display:flex;align-items:center;gap:8px;margin-bottom:7px}
 .env .l1 .nm{font-weight:550;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.minibar{height:7px;border-radius:99px;background:var(--soft);overflow:hidden}
-.minibar > i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .35s ease}
+.minibar{height:7px;border-radius:99px;background:var(--soft);position:relative}
+.minibar > i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .45s cubic-bezier(.4,0,.2,1)}
+/* the thin tick marks where even spending would have put you today */
+.minibar > s{position:absolute;top:-3px;bottom:-3px;width:2px;border-radius:2px;background:rgba(20,22,29,.3)}
 .minibar.ok > i{background:var(--green)} .minibar.warn > i{background:var(--amber)} .minibar.over > i{background:var(--red)}
 .pen{width:26px;height:26px;border-radius:8px;color:var(--muted);font-size:13px;flex:none}
 .pen:active{background:var(--soft)}
@@ -127,7 +145,19 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
 .emojirow button.on{outline:2px solid var(--accent)}
 
 .chartbox{height:230px;position:relative}
-.empty{text-align:center;color:var(--muted);padding:22px 10px;font-size:13.5px}
+.empty{text-align:center;color:var(--muted);padding:22px 10px;font-size:13.5px;line-height:1.6}
+.empty b{display:block;font-size:22px;font-weight:400;margin-bottom:6px;opacity:.55}
+
+/* content settles in instead of snapping — only where the device welcomes motion */
+@media (prefers-reduced-motion: no-preference){
+  @keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+  .view.on > *{animation:rise .34s cubic-bezier(.22,.8,.3,1) both}
+  .view.on > *:nth-child(2){animation-delay:.045s}
+  .view.on > *:nth-child(3){animation-delay:.09s}
+  .view.on > *:nth-child(4){animation-delay:.135s}
+  .view.on > *:nth-child(5){animation-delay:.18s}
+  .view.on > *:nth-child(n+6){animation-delay:.22s}
+}
 .view{display:none} .view.on{display:block}
 .toast{position:fixed;bottom:calc(100px + env(safe-area-inset-bottom));inset-inline:0;margin:auto;width:max-content;max-width:80%;background:#14161d;color:#fff;padding:10px 16px;border-radius:99px;font-size:13.5px;opacity:0;transition:opacity .25s;z-index:70;pointer-events:none}
 .toast.on{opacity:1}
@@ -145,6 +175,12 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
   box-shadow:var(--shadow);font-size:13.5px;display:flex;align-items:center;gap:7px;white-space:nowrap;transition:transform .1s}
 .qchip:active{transform:scale(.96);background:var(--soft)}
 .qchip b{font-variant-numeric:tabular-nums;font-weight:650}
+
+/* goal row actions + insight rows */
+.gbtns{display:flex;gap:4px;flex:none}
+.insight{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.insight:last-child{border-bottom:none}
+.insight .v{font-weight:600;white-space:nowrap}
 
 /* month close */
 .closecard{background:linear-gradient(135deg,#eafaf1,#f2fbf6);border-color:#cfeadd}
@@ -209,11 +245,11 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
       <div class="sm muted">בספארי: כפתור השיתוף <b>􀈂</b> למטה ← «הוספה למסך הבית». האפליקציה תיפתח במסך מלא בלי סרגלי דפדפן.</div>
     </div>
 
-    <div class="hero">
+    <div class="hero" id="hero">
       <div class="lab" id="heroLab">נשאר להוציא</div>
       <div class="big" id="heroBig">—</div>
       <div class="sub" id="heroSub">—</div>
-      <div class="bar" id="heroBar"><i style="width:0%"></i></div>
+      <div class="spark" id="spark"></div>
       <div class="legend"><span id="legL">—</span><span id="legR">—</span></div>
       <div class="pace" id="pace"></div>
       <div class="chips">
@@ -228,11 +264,13 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
     <div class="card">
       <h3>מעטפות החודש <span class="tiny muted" id="envSum"></span></h3>
       <div id="envList"></div>
+      <div class="tiny muted" id="envHint" style="margin-top:9px"></div>
     </div>
 
     <div class="card">
-      <h3>קבועות שעוד לא ירדו</h3>
+      <h3>קבועות החודש <span class="tiny muted" id="billsSum"></span></h3>
       <div id="upcoming"></div>
+      <div class="tiny muted" style="margin-top:8px">נגיעה בשורה משנה את הסכום לחודש הזה בלבד</div>
     </div>
 
     <div class="card">
@@ -244,12 +282,8 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
   <section class="view" id="v-tx">
     <div class="card">
       <h3>תנועות <span class="tiny muted" id="txCount"></span></h3>
-      <div class="seg" id="txFilter">
-        <button class="on" data-f="all">הכל</button>
-        <button data-f="expense">משתנות</button>
-        <button data-f="bill">קבועות</button>
-        <button data-f="income">הכנסות</button>
-      </div>
+      <input class="in" id="txSearch" placeholder="חיפוש בכל התנועות — קטגוריה או הערה"
+        autocapitalize="off" autocorrect="off" spellcheck="false" style="margin-bottom:10px">
       <div id="txList"></div>
     </div>
   </section>
@@ -316,10 +350,6 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
     <div class="card">
       <h3>יעדי חיסכון והשקעה</h3>
       <div id="goalCards"></div>
-    </div>
-    <div class="card">
-      <h3>עריכת יעדים</h3>
-      <div id="goalList"></div>
       <button class="btn ghost sm addbtn" data-add="goal">+ הוספת יעד</button>
     </div>
   </section>
@@ -334,8 +364,9 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
       <div class="chartbox"><canvas id="chDo"></canvas></div>
     </div>
     <div class="card">
-      <h3>סיכום החודש</h3>
+      <h3>לעומת ההרגלים שלך</h3>
       <div id="statsList"></div>
+      <div class="tiny muted" id="statsNote" style="margin-top:9px"></div>
     </div>
   </section>
 
@@ -361,7 +392,7 @@ input,select,textarea{font-family:inherit;font-size:16px;color:inherit} /* 16px 
       <button data-k="income">הכנסה</button>
     </div>
     <input class="amtin" id="mAmt" type="number" inputmode="decimal" placeholder="0" step="0.01">
-    <div class="field"><label>קטגוריה</label><select class="in" id="mCat"></select></div>
+    <div class="field"><label>קטגוריה</label><div class="picks" id="mCatRow"></div></div>
     <div class="grid2">
       <div class="field"><label>תאריך</label><input class="in" type="date" id="mDate"></div>
       <div class="field"><label>הערה</label><input class="in" id="mNote" placeholder="אופציונלי"></div>
@@ -540,6 +571,21 @@ function compute(off){
           total,elapsed,left,isNow,daily,byCat,paceReady,projVar,projEnd};
 }
 const emOf=(arr,name,fb)=>{const o=arr.find(x=>x.name===name);return (o&&o.em)||fb;};
+const stillMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+// the number everything hangs on deserves to land, not blink
+function countTo(el,to){
+  const from = el.__v==null ? to : el.__v;
+  el.__v=to;
+  if(stillMotion || Math.abs(to-from)<1){ el.textContent=money(to); return; }
+  cancelAnimationFrame(el.__raf||0);
+  const t0=performance.now(), dur=620;
+  const step=now=>{
+    const k=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-k,3);
+    el.textContent=money(from+(to-from)*e);
+    if(k<1) el.__raf=requestAnimationFrame(step);
+  };
+  el.__raf=requestAnimationFrame(step);
+}
 
 /* ---------- render ---------- */
 function render(){
@@ -553,13 +599,16 @@ function renderHome(c){
   const pct = spendable>0 ? clamp(c.spentVar/spendable*100,0,100) : (c.spentVar>0?100:0);
   const over = c.remaining<0;
   $("#heroLab").textContent = over ? "חריגה מהתקציב" : (c.isNow?"נשאר להוציא":"נשאר בסוף התקופה");
-  $("#heroBig").textContent = money(c.remaining);
+  countTo($("#heroBig"), c.remaining);
   $("#heroSub").textContent = c.isNow && !over
       ? `${money(c.daily)} ליום · ${c.left} ימים עד ${c.p.end.getDate()}/${c.p.end.getMonth()+1}`
       : (over ? `חרגת ב־${money(-c.remaining)}` : `${c.total} ימים בתקופה`);
-  const bar=$("#heroBar");
-  bar.className="bar"+(over?" over":(pct>85?" warn":""));
-  bar.firstElementChild.style.width=pct+"%";
+  // colour the whole header by how the month is actually going
+  const elapsedPct = c.isNow ? c.elapsed/c.total*100 : 100;
+  const tight = over || (c.paceReady && c.projEnd<0) || (spendable>0 && pct>elapsedPct+18);
+  $("#hero").className = "hero" + (over ? " hot" : (tight ? " warm" : ""));
+
+  drawSpark(c,spendable);
   $("#legL").textContent=`הוצאת ${money(c.spentVar)} מתוך ${money(Math.max(spendable,0))}`;
   $("#legR").textContent= c.isNow ? `יום ${c.elapsed}/${c.total}` : "";
 
@@ -575,8 +624,9 @@ function renderHome(c){
   $("#cVar").textContent=money(c.spentVar);
 
   const el=$("#envList");
+  const tick = c.isNow && c.elapsed<c.total ? clamp(c.elapsed/c.total*100,0,100) : null;
   el.innerHTML = !S.budgets.length
-    ? '<div class="empty">אין מעטפות עדיין. בלשונית «תוכנית» אפשר להגדיר תקציב לכל קטגוריה.</div>'
+    ? '<div class="empty"><b>🧺</b>אין מעטפות עדיין.<br>בלשונית «תוכנית» אפשר להגדיר תקציב לכל קטגוריה.</div>'
     : S.budgets.map(b=>{
       const sp=c.byCat[b.name]||0, bg=+b.amount||0, r=bg-sp;
       const p=bg>0?clamp(sp/bg*100,0,100):(sp>0?100:0);
@@ -588,7 +638,7 @@ function renderHome(c){
           <span class="amt sm" style="color:${r<0?'var(--red)':'var(--muted)'}">${r<0?'חריגה '+money(-r):money(r)+' נשאר'}</span>
           <button class="pen" data-envedit="${b.id}" aria-label="עריכה">✎</button>
         </div>
-        <div class="minibar ${cls}"><i style="width:${p}%"></i></div>
+        <div class="minibar ${cls}"><i style="width:${p}%"></i>${tick!==null&&bg>0?`<s style="inset-inline-start:${tick}%"></s>`:""}</div>
         <div class="tiny muted" style="margin-top:5px">${money(sp)} מתוך ${money(bg)}</div>
         <div class="quick" data-envrow="${b.id}" style="display:none">
           <input class="in num" type="number" value="${bg}" data-envval="${b.id}" placeholder="תקציב">
@@ -598,25 +648,65 @@ function renderHome(c){
     }).join("");
   const totEnvSpent=S.budgets.reduce((a,b)=>a+(c.byCat[b.name]||0),0);
   $("#envSum").textContent=`${money(totEnvSpent)} / ${money(c.plannedEnv)}`;
+  $("#envHint").textContent = (tick!==null && S.budgets.length) ? "הקו הדק מסמן איפה היית אמור להיות היום" : "";
 
+  // standing orders leave on their own — this is a view, not a checklist
   const today=new Date(); today.setHours(0,0,0,0);
-  const up=S.bills.filter(b=>!(b.name in c.paidByName)).map(b=>{
+  const bills=S.bills.map(b=>{
       const day=clamp(+b.day||1,1,31);
       let d=new Date(c.p.start.getFullYear(),c.p.start.getMonth(),day);
       if(d<c.p.start) d=new Date(c.p.start.getFullYear(),c.p.start.getMonth()+1,day);
-      return {...b,due:d};
+      const adj=(b.name in c.paidByName);
+      return {...b,due:d,shown:adj?c.paidByName[b.name]:(+b.amount||0),adj};
     }).sort((a,b)=>a.due-b.due);
-  $("#upcoming").innerHTML = up.length ? up.map(b=>{
-    const late=b.due<today && c.isNow;
-    return `<div class="row"><span class="ico">${esc(b.em||"🧾")}</span>
-      <div class="grow"><div class="nm">${esc(b.name)}</div>
-      <div class="tiny muted">${b.due.getDate()}/${b.due.getMonth()+1}${late?' · עבר התאריך':''}</div></div>
-      <span class="amt" style="color:${late?'var(--red)':'inherit'}">${money(b.amount)}</span>
-      <button class="btn line sm" data-pay="${b.id}">רישום</button></div>`;
-  }).join("") : '<div class="empty">כל הקבועות נרשמו החודש ✓</div>';
+  $("#upcoming").innerHTML = bills.length ? bills.map(b=>{
+    const gone = !c.isNow || b.due<=today;
+    return `<div class="row tap" data-billrow="${b.id}"><span class="ico">${esc(b.em||"🧾")}</span>
+      <div class="grow"><div class="nm" style="${gone?'':'opacity:.85'}">${esc(b.name)}</div>
+        <div class="tiny muted">${gone?'ירד':'ייצא'} ב־${b.due.getDate()}/${b.due.getMonth()+1}${b.adj?' · סכום מעודכן':''}</div></div>
+      <span class="amt" style="${gone?'':'color:var(--muted)'}">${money(b.shown)}</span></div>
+      <div class="quick" data-billedit="${b.id}" style="display:none;padding-bottom:10px">
+        <input class="in num" type="number" value="${Math.round(b.shown)}" data-billval="${b.id}" placeholder="סכום בחודש הזה">
+        <button class="btn sm" data-billsave="${b.id}">שמירה</button>
+      </div>`;
+  }).join("") : '<div class="empty">אין הוצאות קבועות. אפשר להגדיר אותן בלשונית «תוכנית».</div>';
+  $("#billsSum").textContent=money(bills.reduce((a,b)=>a+b.shown,0));
 
   const rec=[...c.tx].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
-  $("#recent").innerHTML=rec.length?rec.map(txRow).join(""):'<div class="empty">אין תנועות בתקופה הזו. לחיצה על + מוסיפה אחת.</div>';
+  $("#recent").innerHTML=rec.length?rec.map(t=>txRow(t,false)).join("")
+    :'<div class="empty"><b>✦</b>עוד לא רשמת כלום החודש.<br>לחיצה על + מוסיפה תנועה ראשונה.</div>';
+}
+
+/* Cumulative spending drawn against the straight line of spending evenly.
+   Time runs right to left, like the rest of the app. Staying under the dashes means staying in budget. */
+function drawSpark(c,spendable){
+  // viewBox matches real pixel width, so the dot stays round on any screen
+  const W=Math.max($("#spark").clientWidth||330,160), H=62, PAD=5, days=c.total;
+  const upto = c.isNow ? c.elapsed : days;
+  const cum=[0];
+  for(let i=1;i<=days;i++) cum[i]=cum[i-1];
+  c.tx.filter(t=>t.kind==="expense").forEach(t=>{
+    const i=clamp(Math.round((parse(t.date)-c.p.start)/864e5)+1,1,days);
+    for(let k=i;k<=days;k++) cum[k]+=(+t.amount||0);
+  });
+  const target = spendable>0 ? spendable : 0;
+  const ymax = Math.max(target, cum[Math.max(upto,1)]||0, 1)*1.08;
+  const x = i => W - (i/days)*W;                 // day 1 on the right
+  const y = v => H-PAD - (v/ymax)*(H-PAD*2);
+
+  let line=`M ${x(0)} ${y(0)}`;
+  for(let i=1;i<=upto;i++) line+=` L ${x(i)} ${y(cum[i])}`;
+  const area = upto>0 ? `${line} L ${x(upto)} ${H-PAD} L ${x(0)} ${H-PAD} Z` : "";
+  const ideal = target>0 ? `M ${x(0)} ${y(0)} L ${x(days)} ${y(target)}` : "";
+  const hx=x(upto), hy=y(cum[upto]||0);
+
+  $("#spark").innerHTML=
+    `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
+       ${area?`<path class="area" d="${area}"/>`:""}
+       ${ideal?`<path class="ideal" d="${ideal}"/>`:""}
+       ${upto>0?`<path class="line draw" d="${line}" pathLength="1" style="--len:1"/>`:""}
+       ${upto>0?`<circle class="halo" cx="${hx}" cy="${hy}" r="5.5"/><circle class="head" cx="${hx}" cy="${hy}" r="2.8"/>`:""}
+     </svg>`;
 }
 
 /* one-tap repeats: the expenses you actually keep entering, at the amount you keep entering */
@@ -642,22 +732,35 @@ function renderQuick(c){
 }
 
 const KIND={expense:{t:"משתנה",e:"💸"},bill:{t:"קבועה",e:"🧾"},income:{t:"הכנסה",e:"💰"}};
-function txRow(t){
+function txRow(t,showYear){
   const k=KIND[t.kind]||KIND.expense, d=parse(t.date);
   const src = t.kind==='expense'?S.budgets : t.kind==='bill'?S.bills : S.income;
+  const when=`${d.getDate()}/${d.getMonth()+1}${showYear?'/'+String(d.getFullYear()).slice(2):''}`;
   return `<div class="row tap" data-tx="${t.id}"><span class="ico">${esc(emOf(src,t.category,k.e))}</span>
     <div class="grow"><div class="nm">${esc(t.category||k.t)}</div>
-      <div class="tiny muted">${d.getDate()}/${d.getMonth()+1}${t.note?' · '+esc(t.note):''}</div></div>
+      <div class="tiny muted">${when}${t.note?' · '+esc(t.note):''}</div></div>
     <span class="pill">${t.of>1 ? `תשלום ${t.seq}/${t.of}` : k.t}</span>
     <span class="amt" style="color:${t.kind==='income'?'var(--green)':'inherit'}">${t.kind==='income'?'+':'−'}${nf1.format(t.amount)}</span></div>`;
 }
 
-let txFilter="all";
+// search runs across every period — "how much did the car cost me this year" is the real question
 function renderTx(c){
-  const list=[...c.tx].filter(t=>txFilter==="all"||t.kind===txFilter).sort((a,b)=>b.date.localeCompare(a.date));
-  $("#txList").innerHTML=list.length?list.map(txRow).join(""):'<div class="empty">אין תנועות להצגה.</div>';
-  $("#txCount").textContent=`${c.tx.length} בתקופה`;
+  const q=($("#txSearch").value||"").trim().toLowerCase();
+  if(q){
+    const list=S.tx.filter(t=>((t.category||"")+" "+(t.note||"")).toLowerCase().includes(q))
+                   .sort((a,b)=>b.date.localeCompare(a.date));
+    const out=list.filter(t=>t.kind!=="income").reduce((a,t)=>a+(+t.amount||0),0);
+    $("#txList").innerHTML=list.length
+      ? list.map(t=>txRow(t,true)).join("")
+      : '<div class="empty">לא נמצאו תנועות תואמות.</div>';
+    $("#txCount").textContent = list.length ? `${list.length} תוצאות · ${money(out)} בסך הכל` : "";
+  } else {
+    const list=[...c.tx].sort((a,b)=>b.date.localeCompare(a.date));
+    $("#txList").innerHTML=list.length?list.map(t=>txRow(t,false)).join(""):'<div class="empty">אין תנועות בתקופה הזו.</div>';
+    $("#txCount").textContent=`${c.tx.length} בתקופה`;
+  }
 }
+$("#txSearch").addEventListener("input",()=>renderTx(compute(offset)));
 
 function eitem(col,x,fields){
   const em = col==='income'?'':`<button class="in emj" data-emoji="${col}:${x.id}">${esc(x.em||"•")}</button>`;
@@ -686,7 +789,7 @@ function renderPlan(){
 function renderGoals(){
   const box=$("#goalCards");
   box.innerHTML = !S.goals.length
-   ? '<div class="empty">עוד אין יעדים. למטה אפשר להוסיף — קרן חירום, טיול, או הפקדה חודשית להשקעות.</div>'
+   ? '<div class="empty"><b>🎯</b>עוד אין יעדים.<br>קרן חירום, טיול, או הפקדה חודשית להשקעות.</div>'
    : S.goals.map(g=>{
       const t=+g.target||0, s=+g.saved||0, p=t>0?clamp(s/t*100,0,100):0;
       let need="";
@@ -700,28 +803,66 @@ function renderGoals(){
         <div class="l1"><span>${esc(g.em||"🎯")}</span><span class="nm">${esc(g.name)}</span>
           <span class="amt sm muted">${money(s)} / ${money(t)}</span></div>
         <div class="minibar ${p>=100?'ok':''}"><i style="width:${p}%"></i></div>
-        <div class="tiny muted" style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div class="tiny muted" style="margin-top:7px;display:flex;justify-content:space-between;align-items:center;gap:8px">
           <span>${Math.round(p)}%${need?' · '+need:''}</span>
-          <span style="display:flex;gap:4px">
-            <button class="btn line sm" data-dep="${g.id}:100">+100</button>
-            <button class="btn line sm" data-dep="${g.id}:500">+500</button>
-          </span></div></div>`;
+          <span class="gbtns">
+            <button class="btn line sm" data-dep="${g.id}">+ הפקדה</button>
+            <button class="pen" data-gedit="${g.id}" aria-label="עריכה">✎</button>
+          </span></div>
+        <div class="quick" data-deprow="${g.id}" style="display:none">
+          <input class="in num" type="number" inputmode="decimal" data-depval="${g.id}" placeholder="כמה הפקדת">
+          <button class="btn sm" data-depsave="${g.id}">הוספה</button>
+        </div>
+        <div data-geditrow="${g.id}" style="display:none;margin-top:8px">
+          ${eitem("goals",g,
+            fld("סכום היעד","goals",g.id,"target",g.target||0)+
+            fld("נצבר","goals",g.id,"saved",g.saved||0)+
+            `<label>תאריך<input class="in" type="month" value="${g.deadline||''}" data-e="goals:${g.id}:deadline"></label>`)}
+        </div>
+      </div>`;
     }).join("");
-  $("#goalList").innerHTML=S.goals.map(g=>eitem("goals",g,
-      fld("יעד","goals",g.id,"target",g.target||0)+
-      fld("נצבר","goals",g.id,"saved",g.saved||0)+
-      `<label>תאריך<input class="in" type="month" value="${g.deadline||''}" data-e="goals:${g.id}:deadline"></label>`)).join("")
-    || '<div class="empty">—</div>';
 }
 
+/* things the home screen can't tell you: how this month compares to your own history */
+function insights(c){
+  const out=[];
+  const rate=c.income>0?Math.round(c.remaining/c.income*100):0;
+  out.push(["שיעור חיסכון", rate+"%", rate<0?"var(--red)":"var(--green)"]);
+
+  const prev=[1,2,3,4,5,6].map(i=>compute(offset-i)).filter(p=>p.tx.length);
+  if(prev.length>=2){
+    // compare like for like: a month in progress is measured against the same slice of a typical month.
+    // median, not average — one wedding month shouldn't redefine what "normal" means for you
+    const scale = c.isNow && c.elapsed<c.total ? c.elapsed/c.total : 1;
+    const median=a=>{ const s=[...a].sort((x,y)=>x-y), n=s.length;
+      return n ? (n%2 ? s[(n-1)/2] : (s[n/2-1]+s[n/2])/2) : 0; };
+    S.budgets.forEach(b=>{
+      const typical=median(prev.map(p=>p.byCat[b.name]||0));
+      const expect=typical*scale;
+      if(expect<60) return;
+      const now=c.byCat[b.name]||0;
+      const d=Math.round((now-expect)/expect*100);
+      if(Math.abs(d)<15) return;
+      const text = now===0 ? "עוד לא הוצאת החודש" : (d>0 ? `${d}% מעל הרגיל` : `${-d}% מתחת לרגיל`);
+      out.push([`${b.em||"💸"} ${b.name}`, text, d>0?"var(--amber)":"var(--green)"]);
+    });
+    const spentNow=c.committedBills+c.spentVar;
+    const best=prev.every(p=>p.committedBills+p.spentVar>spentNow);
+    if(best && (!c.isNow || c.elapsed>=c.total-3))
+      out.push(["החודש הכי חסכוני", `מאז ${pLabel(prev[prev.length-1].p)}`, "var(--green)"]);
+  } else {
+    out.push(["עוד אין מספיק היסטוריה","השוואות יופיעו אחרי חודשיים־שלושה","var(--muted)"]);
+  }
+  out.months=prev.length;
+  return out;
+}
 let chBar=null,chDo=null;
 function renderTrends(c){
-  const rate=c.income>0?Math.round((c.remaining/c.income)*100):0;
-  const rows=[["הכנסות",money(c.income),"var(--green)"],["הוצאות קבועות",money(c.committedBills),"var(--amber)"],
-    ["הוצאות משתנות",money(c.spentVar),"var(--accent)"],["נשאר",money(c.remaining),c.remaining<0?"var(--red)":"var(--ink)"],
-    ["שיעור חיסכון",rate+"%",rate<0?"var(--red)":"var(--ink)"]];
+  const rows=insights(c);
   $("#statsList").innerHTML=rows.map(([n,v,col])=>
-    `<div class="row"><div class="grow nm">${n}</div><span class="amt" style="color:${col}">${v}</span></div>`).join("");
+    `<div class="insight"><span>${n}</span><span class="v" style="color:${col}">${v}</span></div>`).join("");
+  $("#statsNote").textContent = rows.months>=2
+    ? `ההשוואה מול החודש הטיפוסי שלך מתוך ${rows.months} חודשים אחרונים — חודש חריג אחד לא מטה אותה.` : "";
   if($("#v-trends").classList.contains("on")) drawCharts(c);
 }
 function drawCharts(c){
@@ -758,14 +899,24 @@ function undoable(msg,undo){
 }
 
 /* ---------- transaction sheet (add + edit) ---------- */
-let mKind="expense", editId=null;
+let mKind="expense", editId=null, curCat=null;
+// chips, not a dropdown — this is the tap you'll make more than any other
 function fillCats(sel){
   const src = mKind==="expense" ? S.budgets : mKind==="bill" ? S.bills : S.income;
-  const names=src.map(b=>b.name);
+  let names=src.map(b=>b.name);
   if(sel && !names.includes(sel)) names.push(sel);
   if(mKind==="expense") names.push("אחר");
-  $("#mCat").innerHTML=names.map(n=>`<option${n===sel?' selected':''}>${esc(n)}</option>`).join("") || '<option>כללי</option>';
+  if(!names.length) names=["כללי"];
+  curCat = (sel && names.includes(sel)) ? sel : names[0];
+  const fb = mKind==="income"?"💰" : mKind==="bill"?"🧾" : "💸";
+  $("#mCatRow").innerHTML=names.map(n=>
+    `<button class="pick${n===curCat?' on':''}" data-cat="${esc(n)}">${esc(emOf(src,n,fb))} ${esc(n)}</button>`).join("");
 }
+$("#mCatRow").onclick=e=>{
+  const b=e.target.closest("[data-cat]"); if(!b) return;
+  curCat=b.dataset.cat;
+  $$("#mCatRow .pick").forEach(x=>x.classList.toggle("on",x===b));
+};
 function setKind(k){ mKind=k; $$("#mKind button").forEach(x=>x.classList.toggle("on",x.dataset.k===k)); }
 function openTx(t, preset){
   const c=compute(offset), today=new Date();
@@ -802,7 +953,7 @@ $("#mSave").onclick=()=>{
   const a=parseFloat($("#mAmt").value);
   if(!(a>0)){ toast("צריך סכום גדול מאפס"); return; }
   const date=$("#mDate").value||iso(new Date());
-  const data={date,kind:mKind,category:$("#mCat").value||"כללי",amount:a,note:$("#mNote").value.trim()};
+  const data={date,kind:mKind,category:curCat||"כללי",amount:a,note:$("#mNote").value.trim()};
   const n=editId ? 1 : clamp(parseInt($("#mSplit").value)||1,1,36);
   if(editId){ const t=S.tx.find(x=>x.id===editId); if(t) Object.assign(t,data); toast("עודכן ✓"); }
   else if(n>1){ S.tx.push(...splitTx(data,n)); toast(`נרשמו ${n} תשלומים ✓`); }
@@ -866,16 +1017,44 @@ document.addEventListener("click",e=>{
   if(es){ const id=es.dataset.envsave, inp=document.querySelector(`[data-envval="${id}"]`);
     const b=S.budgets.find(x=>x.id===id); if(b){ b.amount=parseFloat(inp.value)||0; save(); render(); toast("התקציב עודכן"); } return; }
 
-  const pay=t.closest("[data-pay]");
-  if(pay){ const b=S.bills.find(x=>x.id===pay.dataset.pay);
-    if(b) openTx(null,{kind:"bill",category:b.name,amount:+b.amount||0}); return; }
+  const br=t.closest("[data-billrow]");
+  if(br){ const row=document.querySelector(`[data-billedit="${br.dataset.billrow}"]`);
+    if(row){ row.style.display = row.style.display==="none" ? "flex" : "none";
+      if(row.style.display==="flex"){ const i=row.querySelector("input"); i.focus(); i.select(); } } return; }
+  const bs=t.closest("[data-billsave]");
+  if(bs){
+    const b=S.bills.find(x=>x.id===bs.dataset.billsave); if(!b) return;
+    const v=parseFloat(document.querySelector(`[data-billval="${b.id}"]`).value);
+    if(!(v>=0)){ toast("סכום לא תקין"); return; }
+    const c=compute(offset);
+    S.tx=S.tx.filter(x=>!(x.kind==="bill" && x.category===b.name && inP(x.date,c.p)));   // replace any override
+    if(Math.round(v)!==Math.round(+b.amount||0)){
+      const day=clamp(+b.day||1,1,31);
+      let d=new Date(c.p.start.getFullYear(),c.p.start.getMonth(),day);
+      if(d<c.p.start) d=new Date(c.p.start.getFullYear(),c.p.start.getMonth()+1,day);
+      S.tx.push({id:uid(),date:iso(d),kind:"bill",category:b.name,amount:v,note:""});
+      toast("הסכום עודכן לחודש הזה");
+    } else toast("חזר לסכום המתוכנן");
+    save(); render(); return;
+  }
 
   const txb=t.closest("[data-tx]");
   if(txb){ const tr=S.tx.find(x=>x.id===txb.dataset.tx); if(tr) openTx(tr); return; }
 
   const dep=t.closest("[data-dep]");
-  if(dep){ const [id,amt]=dep.dataset.dep.split(":"); const g=S.goals.find(x=>x.id===id);
-    if(g){ g.saved=(+g.saved||0)+(+amt); save(); render(); toast("הופקד ✓"); } return; }
+  if(dep){ const row=document.querySelector(`[data-deprow="${dep.dataset.dep}"]`);
+    if(row){ row.style.display = row.style.display==="none" ? "flex" : "none";
+      if(row.style.display==="flex") row.querySelector("input").focus(); } return; }
+  const ds=t.closest("[data-depsave]");
+  if(ds){ const g=S.goals.find(x=>x.id===ds.dataset.depsave); if(!g) return;
+    const v=parseFloat(document.querySelector(`[data-depval="${g.id}"]`).value);
+    if(!(v>0)){ toast("צריך סכום גדול מאפס"); return; }
+    g.saved=(+g.saved||0)+v; save(); render();
+    undoable(`${money(v)} נוספו ל${g.name}`, ()=>{ g.saved=(+g.saved||0)-v; save(); render(); });
+    return; }
+  const ge=t.closest("[data-gedit]");
+  if(ge){ const row=document.querySelector(`[data-geditrow="${ge.dataset.gedit}"]`);
+    if(row) row.style.display = row.style.display==="none" ? "block" : "none"; return; }
 
   const d2=t.closest("[data-del2]");
   if(d2){ if(!d2.classList.contains("armed")){ d2.classList.add("armed"); d2.textContent="?";
@@ -907,9 +1086,8 @@ $$(".tabs button").forEach(b=>b.onclick=()=>{
   window.scrollTo({top:0,behavior:'smooth'});
   if(b.dataset.v==="trends") setTimeout(()=>drawCharts(compute(offset)),40);
 });
-$("#txFilter").onclick=e=>{const b=e.target.closest("button"); if(!b)return;
-  $$("#txFilter button").forEach(x=>x.classList.remove("on")); b.classList.add("on");
-  txFilter=b.dataset.f; renderTx(compute(offset));};
+let rsz; addEventListener("resize",()=>{ clearTimeout(rsz); rsz=setTimeout(()=>{
+  const c=compute(offset); drawSpark(c, c.income-c.committedBills); },160); });
 $("#prevP").onclick=()=>{offset--;render();};
 $("#nextP").onclick=()=>{offset++;render();};
 
